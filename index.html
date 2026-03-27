@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stop Writing Terraform Like It's 2019 — Read This First</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Literata:ital,wght@0,300;0,400;0,500;1,300;1,400&display=swap');
+
+  :root {
+    --bg: #0a0c10;
+    --surface: #111418;
+    --border: #1e2229;
+    --accent: #ff6b35;
+    --accent2: #00d4aa;
+    --text: #e8eaf0;
+    --muted: #7a808f;
+    --highlight: #fff5f0;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Literata', Georgia, serif;
+    font-size: 18px;
+    line-height: 1.75;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grain overlay */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 0; opacity: 0.4;
+  }
+
+  /* Hero */
+  .hero {
+    position: relative;
+    padding: 80px 24px 60px;
+    max-width: 860px;
+    margin: 0 auto;
+    animation: fadeUp 0.9s ease both;
+  }
+
+  .tag {
+    display: inline-block;
+    font-family: 'Syne', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent2);
+    border: 1px solid var(--accent2);
+    border-radius: 2px;
+    padding: 4px 10px;
+    margin-bottom: 28px;
+  }
+
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(2.4rem, 6vw, 4rem);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    color: #fff;
+    margin-bottom: 28px;
+  }
+
+  h1 em {
+    color: var(--accent);
+    font-style: normal;
+    position: relative;
+  }
+
+  h1 em::after {
+    content: '';
+    position: absolute;
+    bottom: 4px; left: 0; right: 0;
+    height: 3px;
+    background: var(--accent);
+    opacity: 0.35;
+    border-radius: 2px;
+  }
+
+  .subtitle {
+    font-size: 1.15rem;
+    color: var(--muted);
+    font-style: italic;
+    max-width: 600px;
+    margin-bottom: 36px;
+    font-weight: 300;
+  }
+
+  .meta {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .meta-dot { color: var(--border); }
+
+  .divider {
+    width: 100%;
+    height: 1px;
+    background: var(--border);
+    max-width: 860px;
+    margin: 0 auto 56px;
+  }
+
+  /* Article body */
+  article {
+    max-width: 700px;
+    margin: 0 auto;
+    padding: 0 24px 80px;
+    animation: fadeUp 1.1s ease 0.15s both;
+  }
+
+  article p { margin-bottom: 1.6rem; color: #c8cad4; }
+
+  h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.55rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 3rem 0 1rem;
+    letter-spacing: -0.01em;
+  }
+
+  h3 {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--accent2);
+    margin: 2rem 0 0.75rem;
+    letter-spacing: 0.02em;
+  }
+
+  /* Pull quote */
+  .pullquote {
+    border-left: 3px solid var(--accent);
+    padding: 20px 28px;
+    margin: 2.5rem 0;
+    background: rgba(255, 107, 53, 0.05);
+    border-radius: 0 6px 6px 0;
+    font-size: 1.2rem;
+    font-style: italic;
+    color: #e0c8c0;
+    font-weight: 300;
+  }
+
+  /* Code block */
+  .code-block {
+    background: #0d1117;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent2);
+    border-radius: 6px;
+    padding: 20px 24px;
+    font-family: 'Courier New', monospace;
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: #89ddff;
+    margin: 2rem 0;
+    overflow-x: auto;
+  }
+
+  .code-block .comment { color: #546e7a; }
+  .code-block .key { color: #c792ea; }
+  .code-block .val { color: #c3e88d; }
+  .code-block .str { color: var(--accent2); }
+
+  /* Pain points grid */
+  .pain-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 2rem 0;
+  }
+
+  @media (max-width: 560px) { .pain-grid { grid-template-columns: 1fr; } }
+
+  .pain-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+  }
+
+  .pain-card .icon { font-size: 1.5rem; margin-bottom: 8px; }
+  .pain-card h4 {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 6px;
+    letter-spacing: 0.02em;
+  }
+  .pain-card p { font-size: 0.88rem; color: var(--muted); margin: 0; line-height: 1.55; }
+
+  /* Chapter list */
+  .chapter-list {
+    list-style: none;
+    margin: 1.5rem 0;
+  }
+
+  .chapter-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.95rem;
+    color: #b0b4c0;
+  }
+
+  .chapter-list li:last-child { border-bottom: none; }
+
+  .ch-num {
+    font-family: 'Syne', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--accent);
+    min-width: 28px;
+    margin-top: 2px;
+  }
+
+  .ch-title { font-weight: 500; color: var(--text); display: block; margin-bottom: 2px; }
+
+  /* Testimonial */
+  .testimonial {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 28px 32px;
+    margin: 2.5rem 0;
+    position: relative;
+  }
+
+  .testimonial::before {
+    content: '"';
+    position: absolute;
+    top: -16px; left: 24px;
+    font-family: 'Syne', sans-serif;
+    font-size: 5rem;
+    color: var(--accent);
+    line-height: 1;
+    opacity: 0.3;
+  }
+
+  .testimonial p {
+    font-size: 1rem;
+    font-style: italic;
+    color: #c0c4d0;
+    margin-bottom: 16px;
+  }
+
+  .testimonial-author {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent2);
+    letter-spacing: 0.05em;
+  }
+
+  /* CTA */
+  .cta-block {
+    background: linear-gradient(135deg, rgba(255,107,53,0.12) 0%, rgba(0,212,170,0.07) 100%);
+    border: 1px solid rgba(255,107,53,0.3);
+    border-radius: 12px;
+    padding: 40px 36px;
+    margin: 3rem 0 2rem;
+    text-align: center;
+  }
+
+  .cta-block h2 {
+    font-size: 1.8rem;
+    margin: 0 0 12px;
+    color: #fff;
+  }
+
+  .cta-block p {
+    color: var(--muted);
+    max-width: 460px;
+    margin: 0 auto 28px;
+    font-size: 1rem;
+  }
+
+  .btn {
+    display: inline-block;
+    background: var(--accent);
+    color: #fff;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 14px 36px;
+    border-radius: 4px;
+    text-decoration: none;
+    transition: transform 0.15s, box-shadow 0.15s;
+    cursor: pointer;
+    border: none;
+  }
+
+  .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(255,107,53,0.35);
+  }
+
+  .btn-secondary {
+    display: inline-block;
+    color: var(--accent2);
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    text-decoration: underline;
+    margin-left: 16px;
+    cursor: pointer;
+  }
+
+  /* Highlight text */
+  mark {
+    background: rgba(0,212,170,0.15);
+    color: var(--accent2);
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+
+  strong { color: #fff; font-weight: 500; }
+
+  /* Animations */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Accent line */
+  .section-line {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 3rem 0 1.5rem;
+  }
+
+  .section-line span {
+    font-family: 'Syne', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .section-line::before {
+    content: '';
+    width: 32px; height: 2px;
+    background: var(--accent);
+    border-radius: 2px;
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="tag">📘 Dev Community · Infrastructure · Book</div>
+  <h1>Stop Writing Terraform Like <em>It's 2019</em></h1>
+  <p class="subtitle">Most engineers treat Terraform as a glorified click-replacement. Here's why that's costing your team weeks every quarter — and how one book changed how I think about infra.</p>
+  <div class="meta">
+    <span>8 min read</span>
+    <span class="meta-dot">·</span>
+    <span>Infrastructure Engineering</span>
+    <span class="meta-dot">·</span>
+    <span>March 2026</span>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<article>
+
+  <p>I'll be honest with you. When I first picked up Terraform, I copy-pasted from StackOverflow, got it working, and moved on. The infra provisioned. The PR merged. Life was good.</p>
+
+  <p>Then three months later, a new engineer joined the team. They had to onboard to our infra codebase. It took two full weeks. Two weeks of "what does this module do?", "why is this hardcoded?", "why are there four different ways we're doing the same thing?"</p>
+
+  <p>That's when I realized — <strong>I wasn't writing Terraform. I was writing chaos with a `.tf` extension.</strong></p>
+
+  <div class="pullquote">
+    "Working Terraform and well-engineered Terraform are two completely different things. Most teams only discover the difference when it's already expensive."
+  </div>
+
+  <div class="section-line"><span>The Real Problem</span></div>
+  <h2>Your Terraform Works. Your Terraform Is Also a Liability.</h2>
+
+  <p>Here's what bad Terraform looks like in the wild — and be honest, you've seen at least three of these:</p>
+
+  <div class="pain-grid">
+    <div class="pain-card">
+      <div class="icon">🔁</div>
+      <h4>Copy-paste modules</h4>
+      <p>Same resource block duplicated 6 times with minor variable changes. Nobody remembers which is the "real" one.</p>
+    </div>
+    <div class="pain-card">
+      <div class="icon">🔒</div>
+      <h4>Hardcoded everything</h4>
+      <p>Region, account IDs, AMI IDs — all baked in. Works on prod. Breaks on staging. Always.</p>
+    </div>
+    <div class="pain-card">
+      <div class="icon">💥</div>
+      <h4>State file anxiety</h4>
+      <p>Everyone's afraid to run <code>terraform destroy</code>. Nobody knows what's actually in state vs what's in code.</p>
+    </div>
+    <div class="pain-card">
+      <div class="icon">🌀</div>
+      <h4>Zero environment separation</h4>
+      <p>One workspace for dev and prod. "We'll fix it later." You won't. You know you won't.</p>
+    </div>
+  </div>
+
+  <p>These aren't beginner mistakes. Senior engineers make them too — because Terraform's flexibility <em>enables</em> bad patterns just as easily as good ones. The tool doesn't save you from yourself.</p>
+
+  <div class="section-line"><span>Why This Book</span></div>
+  <h2>I Read a Lot of Terraform Content. Most of It Stops at "How."</h2>
+
+  <p>There's no shortage of Terraform tutorials. But most of them answer <mark>how</mark> to write Terraform — not <mark>why</mark> you structure it one way versus another, or what blows up at scale.</p>
+
+  <p>This book is different. It's built around <strong>decisions</strong> — the ones you'll actually face in production — and walks through the tradeoffs with real examples.</p>
+
+  <p>Here's a taste of what's inside:</p>
+
+  <div class="code-block">
+<span class="comment"># Before: what most teams write</span>
+<span class="key">resource</span> <span class="str">"aws_s3_bucket"</span> <span class="str">"logs"</span> {
+  bucket = <span class="val">"company-logs-prod-2023-v2-final"</span>
+  <span class="comment"># 40 more hardcoded lines...</span>
+}
+
+<span class="comment"># After: what the book teaches you to write</span>
+<span class="key">module</span> <span class="str">"log_bucket"</span> {
+  source      = <span class="val">"./modules/s3-secure"</span>
+  name_prefix = <span class="val">var.env</span>
+  tags        = <span class="val">local.common_tags</span>
+  retention   = <span class="val">var.log_retention_days</span>
+}
+  </div>
+
+  <p>The difference isn't just aesthetics. The second version deploys to 5 environments, survives a team handover, and passes a security audit. The first one? It'll work until it doesn't.</p>
+
+  <div class="section-line"><span>What's Inside</span></div>
+  <h2>A Chapter-by-Chapter Look</h2>
+
+  <ul class="chapter-list">
+    <li>
+      <span class="ch-num">01</span>
+      <div>
+        <span class="ch-title">Terraform Mental Models — Think Infrastructure, Not Code</span>
+        How to stop thinking like a developer and start thinking like an infra engineer. Declarative vs imperative mindset explained clearly.
+      </div>
+    </li>
+    <li>
+      <span class="ch-num">02</span>
+      <div>
+        <span class="ch-title">State Management Done Right</span>
+        Remote state, state locking, import flows, and the dreaded "state drift" — with real war stories included.
+      </div>
+    </li>
+    <li>
+      <span class="ch-num">03</span>
+      <div>
+        <span class="ch-title">Module Architecture for Teams</span>
+        How to design modules that other engineers actually want to use — not fear.
+      </div>
+    </li>
+    <li>
+      <span class="ch-num">04</span>
+      <div>
+        <span class="ch-title">Multi-Environment Patterns</span>
+        Workspaces vs directory structures vs Terragrunt — the honest comparison no blog post gives you.
+      </div>
+    </li>
+    <li>
+      <span class="ch-num">05</span>
+      <div>
+        <span class="ch-title">CI/CD for Infrastructure</span>
+        Pipeline patterns for plan/apply, PR automation, drift detection, and rollback strategy.
+      </div>
+    </li>
+    <li>
+      <span class="ch-num">06</span>
+      <div>
+        <span class="ch-title">Security & Compliance as Code</span>
+        Encoding your security policies into Terraform — so they're enforced, not hoped for.
+      </div>
+    </li>
+    <li>
+      <span class="ch-num">07</span>
+      <div>
+        <span class="ch-title">Refactoring Legacy Terraform</span>
+        How to migrate that sprawling, terrifying infra codebase without burning everything down.
+      </div>
+    </li>
+  </ul>
+
+  <div class="section-line"><span>From Readers</span></div>
+  <h2>What Engineers Are Saying</h2>
+
+  <div class="testimonial">
+    <p>We onboarded three engineers this quarter. For the first time, they were productive in infra in under three days. That's directly because we restructured our codebase following patterns from this book.</p>
+    <div class="testimonial-author">— Senior DevOps Engineer, FinTech Startup</div>
+  </div>
+
+  <div class="testimonial">
+    <p>Chapter 4 on multi-environment patterns alone saved us from a painful Terragrunt migration we were about to start. The honest comparison made the decision obvious.</p>
+    <div class="testimonial-author">— Platform Engineer, SaaS Company</div>
+  </div>
+
+  <div class="section-line"><span>Who It's For</span></div>
+  <h2>Is This Book for You?</h2>
+
+  <p>This is <strong>not</strong> a beginner book. If you've never written a Terraform resource block, start with the official docs.</p>
+
+  <p>This is for you if:</p>
+
+  <ul style="margin: 1rem 0 1.5rem 1.5rem; color: #b0b4c0;">
+    <li style="margin-bottom: 0.6rem;">You've been writing Terraform for 6+ months but feel like your codebase is getting harder, not easier</li>
+    <li style="margin-bottom: 0.6rem;">You're the person on the team everyone comes to for infra questions — and you're tired of it</li>
+    <li style="margin-bottom: 0.6rem;">You're prepping for a senior/staff role that involves owning infrastructure</li>
+    <li style="margin-bottom: 0.6rem;">Your team is growing and your Terraform isn't scaling with it</li>
+  </ul>
+
+  <p>If any of those hit — this book was written for you.</p>
+
+  <div class="cta-block">
+    <h2>Ready to Write Terraform That Scales?</h2>
+    <p>Join hundreds of engineers who've moved from "it works" to "it's maintainable, secure, and a joy to work in."</p>
+    <a href="#" class="btn">Get the Book →</a>
+    <a href="#" class="btn-secondary">Read a free chapter</a>
+  </div>
+
+  <p style="text-align:center; font-size: 0.85rem; color: var(--muted); font-style: italic;">No fluff. No padding. Just the infra engineering knowledge that took years of production systems to learn.</p>
+
+</article>
+
+</body>
+</html>
